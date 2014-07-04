@@ -1,6 +1,7 @@
 class Sledgehammer::Page < ActiveRecord::Base
   belongs_to :website
-  has_many :contacts
+  has_many :page_contacts
+  has_many :contacts, through: :page_contacts
   before_create :create_website!
 
   protected
