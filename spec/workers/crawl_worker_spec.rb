@@ -18,13 +18,13 @@ RSpec.describe Sledgehammer::CrawlWorker, sidekiq: :fake do
     end
 
     it "doesn't work when the depth limit is hit" do
-      worker.perform(['http://www.example.com'], depth: 2, depth_limit: 2)
+      worker.perform(['http://www.example.com'], { 'depth' => 2, 'depth_limit' => 2 })
       expect(Sledgehammer::Contact.count).to eq(0)
     end
 
     it "crawls all pages and finds e-mails on them" do
       Sidekiq::Testing.inline! do
-        worker.perform(['http://www.example.com'], depth_limit: 3)
+        worker.perform(['http://www.example.com'], { 'depth_limit' => 3 })
         expect(Sledgehammer::Contact.count).to eq(5)
         expect(Sledgehammer::Page.count).to eq(3)
       end
