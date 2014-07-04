@@ -11,12 +11,13 @@ class Sledgehammer::CrawlWorker
     run_queue
   end
 
-  def queue(site)
-    request = Typhoeus::Request.new(site)
+  def queue(url)
+    page = self.find_or_create_page!(url)
+    request = Typhoeus::Request.new(url)
     request.on_complete do |response|
-      page = self.find_or_create_page!(response)
       self.parse_emails(response, page)
       self.parse_urls(response)
+      page.update_attribute :completed, true
     end
 
     Typhoeus::Hydra.hydra.queue(request)
@@ -27,8 +28,7 @@ class Sledgehammer::CrawlWorker
   end
 
   protected
-  def find_or_create_page!(response)
-    request_url = response.request.url
+  def find_or_create_page!(request_url)
     page = Sledgehammer::Page.find_by(url: request_url)
 
     unless page

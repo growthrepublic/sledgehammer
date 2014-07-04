@@ -4,6 +4,7 @@ class CreatePages < ActiveRecord::Migration
       t.references :website, index: true
       t.string :url
       t.integer :depth
+      t.boolean :completed
 
       t.timestamps
     end
