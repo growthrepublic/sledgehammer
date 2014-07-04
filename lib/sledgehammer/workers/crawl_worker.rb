@@ -39,8 +39,8 @@ class Sledgehammer::CrawlWorker
     page.update_attribute :completed, true
   end
 
-  def set_options(opts)
-    # stub
+  def options
+    {}
   end
 
   #
@@ -48,12 +48,14 @@ class Sledgehammer::CrawlWorker
   #
 
   def perform(urls, opts={})
-    set_options(opts)
+    @options = HashWithIndifferentAccess.new(opts)
 
-    @depth       = opts['depth'] || 0
-    @depth_limit = opts['depth_limit'] || 1
+    @options[:depth]       = opts['depth'] || 0
+    @options[:depth_limit] = opts['depth_limit'] || 1
 
-    return if @depth == @depth_limit
+    @options.merge!(options)
+
+    return if @options[:depth] == @options[:depth_limit]
 
     before_queue(urls)
     urls.each { |site| self.queue(site) }
@@ -65,8 +67,8 @@ class Sledgehammer::CrawlWorker
     return unless self.on_queue(url) && valid_url?(url)
 
     request = Typhoeus::Request.new(url)
-    request.on_headers  { |response| self.on_headers(response) }
-    request.on_body     { |response| self.on_body(response) }
+    request.on_headers { |response| self.on_headers(response) }
+    request.on_body { |response| self.on_body(response) }
     request.on_complete { |response| self.on_complete(response) }
 
     Typhoeus::Hydra.hydra.queue(request)
@@ -83,7 +85,7 @@ class Sledgehammer::CrawlWorker
     unless page
       hostname = URI.parse(request_url).host
       website  = Sledgehammer::Website.find_or_create_by(hostname: hostname)
-      page = Sledgehammer::Page.create!(url: request_url, depth: @depth, website: website)
+      page     = Sledgehammer::Page.create!(url: request_url, depth: @options[:depth], website: website)
     end
     page
   end
@@ -100,7 +102,8 @@ class Sledgehammer::CrawlWorker
   def parse_urls(response)
     request_url = response.request.url
     request_url = "http://#{request_url}" unless request_url.match /^http/
-    url_list = response.body.scan(URL_REGEX).flatten.map do |url|
+
+    url_list    = response.body.scan(URL_REGEX).flatten.map do |url|
       if url == request_url
         return
       elsif url.starts_with?('/')
@@ -110,9 +113,11 @@ class Sledgehammer::CrawlWorker
       end
     end.compact
 
-    depth = @depth + 1
-    unless depth >= @depth_limit || url_list.empty?
-      self.class.perform_async(url_list, { depth: depth, depth_limit: @depth_limit })
+    opts         = @options.dup
+    opts[:depth] += 1
+
+    unless opts[:depth] >= opts[:depth_limit] || url_list.empty?
+      self.class.perform_async(url_list, opts)
     end
   end
 
