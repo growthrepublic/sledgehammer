@@ -39,9 +39,17 @@ class Sledgehammer::CrawlWorker
     page.update_attribute :completed, true
   end
 
-  def perform(urls, opts={})
+  def set_options(opts)
     @depth       = opts['depth'] || 0
     @depth_limit = opts['depth_limit'] || 1
+  end
+
+  #
+  # There shouldn't be any need to overload methods below
+  #
+
+  def perform(urls, opts={})
+    set_options(opts)
 
     return if @depth == @depth_limit
 
