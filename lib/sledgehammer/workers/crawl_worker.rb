@@ -23,14 +23,6 @@ class Sledgehammer::CrawlWorker
     # stub
   end
 
-  def on_headers(response)
-    # stub
-  end
-
-  def on_body(response)
-    # stub
-  end
-
   def on_complete(response)
     page = self.find_or_create_page!(response.request.url)
 
@@ -67,8 +59,6 @@ class Sledgehammer::CrawlWorker
     return unless self.on_queue(url) && valid_url?(url)
 
     request = Typhoeus::Request.new(url)
-    request.on_headers { |response| self.on_headers(response) }
-    request.on_body { |response| self.on_body(response) }
     request.on_complete { |response| self.on_complete(response) }
 
     Typhoeus::Hydra.hydra.queue(request)
