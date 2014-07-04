@@ -3,22 +3,61 @@ class Sledgehammer::CrawlWorker
   MAIL_REGEX = /[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/
   URL_REGEX  = /<a\s+(?:[^>]*?\s+)?href="((?:http|\/)[^"]+)"/
 
-  def perform(urls, depth = 0, depth_limit = 3)
-    @depth       = depth
-    @depth_limit = depth_limit
+  # TODO: Next time you want to add a new callback, refactor this to use https://github.com/apotonick/hooks
 
+  #
+  # Callbacks to overload in application
+  #
+  def before_queue(urls)
+    # stub
+  end
+
+  #
+  # Stops element from being added to queue if returns false
+  #
+  def on_queue(url)
+    true
+  end
+
+  def after_queue(urls)
+    # stub
+  end
+
+  def on_headers(response)
+    # stub
+  end
+
+  def on_body(response)
+    # stub
+  end
+
+  def on_complete(response)
+    page = self.find_or_create_page!(response.request.url)
+
+    self.parse_emails(response, page)
+    self.parse_urls(response)
+    page.update_attribute :completed, true
+  end
+
+  def perform(urls, opts={})
+    @depth       = opts[:depth] || 0
+    @depth_limit = opts[:depth_limit] || 1
+
+    return if @depth == @depth_limit
+
+    before_queue(urls)
     urls.each { |site| self.queue(site) }
     run_queue
+    after_queue(urls)
   end
 
   def queue(url)
-    page = self.find_or_create_page!(url)
+    return unless self.on_queue(url) && valid_url?(url)
+
     request = Typhoeus::Request.new(url)
-    request.on_complete do |response|
-      self.parse_emails(response, page)
-      self.parse_urls(response)
-      page.update_attribute :completed, true
-    end
+    request.on_headers  { |response| self.on_headers(response) }
+    request.on_body     { |response| self.on_body(response) }
+    request.on_complete { |response| self.on_complete(response) }
 
     Typhoeus::Hydra.hydra.queue(request)
   end
@@ -34,7 +73,7 @@ class Sledgehammer::CrawlWorker
     unless page
       hostname = URI.parse(request_url).host
       website  = Sledgehammer::Website.find_or_create_by(hostname: hostname)
-      page = Sledgehammer::Page.create!(url: request_url, depth: @depth)
+      page = Sledgehammer::Page.create!(url: request_url, depth: @depth, website: website)
     end
     page
   end
@@ -52,17 +91,24 @@ class Sledgehammer::CrawlWorker
     request_url = response.request.url
     request_url = "http://#{request_url}" unless request_url.match /^http/
     url_list = response.body.scan(URL_REGEX).flatten.map do |url|
-      if (url == '/' || url == request_url)
+      if url == request_url
         return
       elsif url.starts_with?('/')
         URI.join(request_url, url).to_s
-      else
+      elsif valid_url?(url)
         url
       end
     end.compact
 
-    unless @depth + 1 >= @depth_limit || url_list.empty?
-      self.class.perform_async(url_list, @depth + 1, @depth_limit)
+    depth = @depth + 1
+    unless depth >= @depth_limit || url_list.empty?
+      self.class.perform_async(url_list, { depth: depth, depth_limit: @depth_limit })
     end
   end
+
+  def valid_url?(url)
+    !!URI.parse(url) rescue false
+  end
+
+
 end
