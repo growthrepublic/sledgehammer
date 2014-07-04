@@ -40,8 +40,7 @@ class Sledgehammer::CrawlWorker
   end
 
   def set_options(opts)
-    @depth       = opts['depth'] || 0
-    @depth_limit = opts['depth_limit'] || 1
+    # stub
   end
 
   #
@@ -50,6 +49,9 @@ class Sledgehammer::CrawlWorker
 
   def perform(urls, opts={})
     set_options(opts)
+
+    @depth       = opts['depth'] || 0
+    @depth_limit = opts['depth_limit'] || 1
 
     return if @depth == @depth_limit
 
