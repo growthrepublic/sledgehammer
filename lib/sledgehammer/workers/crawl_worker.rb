@@ -26,10 +26,11 @@ class Sledgehammer::CrawlWorker
 
   def on_complete(response)
     page = self.find_or_create_page!(response.request.url)
-
-    self.parse_emails(response, page)
-    self.parse_urls(response)
-    page.update_attribute :completed, true
+    unless page.completed?
+      self.parse_emails(response, page)
+      self.parse_urls(response)
+      page.update_attributes completed: true
+    end
   end
 
   #
@@ -65,10 +66,12 @@ class Sledgehammer::CrawlWorker
   def find_or_create_page!(request_url)
     page = Sledgehammer::Page.find_by(url: request_url)
 
-    unless page
+    if page.blank?
       hostname = URI.parse(request_url).host
       website  = Sledgehammer::Website.find_or_create_by(hostname: hostname)
       page     = Sledgehammer::Page.create!(url: request_url, depth: @options[:depth], website: website)
+    elsif page.depth < @options[:depth]
+      page.update_attributes completed: false
     end
     page
   end
@@ -87,11 +90,11 @@ class Sledgehammer::CrawlWorker
     request_url = "http://#{request_url}" unless request_url.match /^http/
 
     url_list    = response.body.scan(URL_REGEX).flatten.map do |url|
-      if url == request_url
+      if url == request_url || !valid_url?(url)
         return
       elsif url.starts_with?('/')
         URI.join(request_url, url).to_s
-      elsif valid_url?(url)
+      else
         url
       end
     end.compact
