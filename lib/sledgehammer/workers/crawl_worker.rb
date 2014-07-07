@@ -2,6 +2,7 @@ class Sledgehammer::CrawlWorker
   include ::Sidekiq::Worker
   MAIL_REGEX = /[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/
   URL_REGEX  = /<a\s+(?:[^>]*?\s+)?href="((?:http|\/)[^"]+)"/
+  DEFAULT_OPTIONS = { depth: 0, depth_limit: 1, queue: 'default' }
 
   # TODO: Next time you want to add a new callback, refactor this to use https://github.com/apotonick/hooks
 
@@ -31,21 +32,13 @@ class Sledgehammer::CrawlWorker
     page.update_attribute :completed, true
   end
 
-  def options
-    {}
-  end
-
   #
   # There shouldn't be any need to overload methods below
   #
 
-  def perform(urls, opts={})
-    @options = HashWithIndifferentAccess.new(opts)
-
-    @options[:depth]       = opts['depth'] || 0
-    @options[:depth_limit] = opts['depth_limit'] || 1
-
-    @options.merge!(options)
+  def perform(urls, opts = {})
+    @options = HashWithIndifferentAccess.new(DEFAULT_OPTIONS)
+    @options.merge!(opts)
 
     return if @options[:depth] == @options[:depth_limit]
 
@@ -107,7 +100,9 @@ class Sledgehammer::CrawlWorker
     opts[:depth] += 1
 
     unless opts[:depth] >= opts[:depth_limit] || url_list.empty?
-      self.class.perform_async(url_list, opts)
+      Sidekiq::Client.push('queue' => opts[:queue],
+        'class' => self.class,
+        'args' => [url_list, opts])
     end
   end
 
