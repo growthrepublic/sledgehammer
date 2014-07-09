@@ -1,10 +1,8 @@
 class Sledgehammer::CrawlWorker
   include ::Sidekiq::Worker
-  MAIL_REGEX = /[a-z0-9!#$%&'*+\/=?^_`{|}~-]+(?:\.[a-z0-9!#$%&'*+\/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?/
+  MAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.(?!jpg|gif|png)[A-Z0-9]+/i
   URL_REGEX  = /<a\s+(?:[^>]*?\s+)?href="((?:http|\/)[^"]+)"/
   DEFAULT_OPTIONS = { depth: 0, depth_limit: 1, queue: 'default' }
-
-  # TODO: Next time you want to add a new callback, refactor this to use https://github.com/apotonick/hooks
 
   #
   # Callbacks to overload in application
@@ -79,6 +77,7 @@ class Sledgehammer::CrawlWorker
   def parse_emails(response, page)
     mail_list = response.body.scan MAIL_REGEX
     mail_list.each do |email|
+      # binding.pry
       contact = Sledgehammer::Contact.find_or_create_by(email: email)
       Sledgehammer::PageContact.find_or_create_by page: page, contact: contact
     end
@@ -112,6 +111,4 @@ class Sledgehammer::CrawlWorker
   def valid_url?(url)
     !!URI.parse(url) rescue false
   end
-
-
 end
