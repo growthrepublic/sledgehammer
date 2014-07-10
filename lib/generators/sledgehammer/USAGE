@@ -1,0 +1,11 @@
+Description:
+    Generates ActiveRecord migrations needed to use this gem in Rails application
+
+Example:
+    rails generate sledgehammer:install
+
+    This will create:
+        db/migrate/20140626075744_create_pages.rb
+        db/migrate/20140626080142_create_contacts.rb
+        db/migrate/20140626105612_create_websites.rb
+        db/migrate/20140704070249_create_page_contacts.rb

@@ -77,7 +77,6 @@ class Sledgehammer::CrawlWorker
   def parse_emails(response, page)
     mail_list = response.body.scan MAIL_REGEX
     mail_list.each do |email|
-      # binding.pry
       contact = Sledgehammer::Contact.find_or_create_by(email: email)
       Sledgehammer::PageContact.find_or_create_by page: page, contact: contact
     end
@@ -88,9 +87,9 @@ class Sledgehammer::CrawlWorker
     request_url = response.request.url
     request_url = "http://#{request_url}" unless request_url.match /^http/
 
-    url_list    = response.body.scan(URL_REGEX).flatten.map do |url|
+    url_list = response.body.scan(URL_REGEX).flatten.map do |url|
       if url == request_url || !valid_url?(url)
-        return
+        nil
       elsif url.starts_with?('/')
         URI.join(request_url, url).to_s
       else
