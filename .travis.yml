@@ -1,0 +1,6 @@
+language: ruby
+rvm:
+  - 2.1.1
+script:
+  - bundle exec rake db:test:prepare
+  - bundle exec rake

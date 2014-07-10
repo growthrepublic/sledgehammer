@@ -1,4 +1,4 @@
-# Sledgehammer
+# Sledgehammer [![Gem Version](https://badge.fury.io/rb/sledgehammer.svg)](http://badge.fury.io/rb/sledgehammer) 
 
 Sledgehammer is a gem which allows to crawl websites in search of email addresses.
 It uses Typhoeus and Sidekiq to spawn ultra-fast workers which gathers data in no-time.
