@@ -88,7 +88,7 @@ There are 3 methods you should ever need to overwrite, and one that should rathe
 You can also access options that were passed to `Sledgehammer::CrawlWorker` with `@options` ivar.
 
 If the need arises in the future, we will add more robust way of adding callbacks and modyfing 
-Sledgehammer behaviour (#4), but for now this was more than enough for our needs. 
+Sledgehammer behaviour ([and we're still rewriting things](https://github.com/growthrepublic/sledgehammer/issues/4)), but for now this was more than enough for our needs. 
 
 ## Contributors
 
