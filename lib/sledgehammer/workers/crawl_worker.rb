@@ -1,6 +1,6 @@
 class Sledgehammer::CrawlWorker
   include ::Sidekiq::Worker
-  MAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.(?!jpg|gif|png)[A-Z0-9]+/i
+  MAIL_REGEX = /[A-Z0-9._%+-]+@[A-Z0-9.-]*[A-Z]+[A-Z0-9.-]*\.(?!jpg|gif|png)[A-Z0-9]+/i
   URL_REGEX  = /<a\s+(?:[^>]*?\s+)?href="((?:http|\/)[^"]+)"/
   DEFAULT_OPTIONS = { depth: 0, depth_limit: 1, queue: 'default' }
 
