@@ -77,8 +77,8 @@ class Sledgehammer::CrawlWorker
   def parse_emails(response, page)
     mail_list = response.body.scan MAIL_REGEX
     mail_list.each do |email|
-      Sledgehammer::Contact.create email: email
-      Sledgehammer::PageContact.create page: page, contact: contact
+      contact = Sledgehammer::Contact.find_or_create_by(email: email)
+      Sledgehammer::PageContact.create(page: page, contact: contact)
     end
   end
 
