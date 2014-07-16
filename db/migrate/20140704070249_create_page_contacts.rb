@@ -4,5 +4,6 @@ class CreatePageContacts < ActiveRecord::Migration
       t.references :page, index: true
       t.references :contact, index: true
     end
+    add_index :page_contacts, [:page_id, :contact_id], unique: true
   end
 end
