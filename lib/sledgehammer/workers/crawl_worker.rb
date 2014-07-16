@@ -82,32 +82,38 @@ class Sledgehammer::CrawlWorker
     end
   end
 
-  # TODO: remove url == '/' because we not always start at root page
   def parse_urls(response)
     request_url = response.request.url
     request_url = "http://#{request_url}" unless request_url.match /^http/
 
-    url_list = response.body.scan(URL_REGEX).flatten.map do |url|
-      if url == request_url || !valid_url?(url)
-        nil
-      elsif url.starts_with?('/')
-        URI.join(request_url, url).to_s
-      else
-        url
-      end
+    url_list = scan_for_urls(response.body).map do |url|
+      (url == request_url || !valid_url?(url)) ? nil : absolute_url(request_url, url)
     end.compact
 
+    go_deeper url_list
+  end
+
+  def valid_url?(url)
+    !!URI.parse(url) rescue false
+  end
+
+  def absolute_url(request_url, url)
+    url = URI.join(request_url, url).to_s if url.starts_with?('/')
+    url
+  end
+
+  def scan_for_urls(body)
+    body.scan(URL_REGEX).flatten
+  end
+
+  def go_deeper(url_list)
     opts         = @options.dup
     opts[:depth] += 1
 
     unless opts[:depth] >= opts[:depth_limit] || url_list.empty?
       Sidekiq::Client.push('queue' => opts[:queue],
-        'class' => self.class,
-        'args' => [url_list, opts])
+                           'class' => self.class,
+                           'args' => [url_list, opts])
     end
-  end
-
-  def valid_url?(url)
-    !!URI.parse(url) rescue false
   end
 end
